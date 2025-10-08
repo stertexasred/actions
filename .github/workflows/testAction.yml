@@ -1,0 +1,28 @@
+name: "testActions"
+description: "テスト"
+
+inputs:
+  base-branch:
+    description: main に向けて Pull Request を作るベースブランチ
+    required: true
+
+  github-token:
+    description: GitHub access token to create pull request
+    required: true
+
+  main-branch:
+    default: "main"
+    description: main ブランチの名称 (mainにしていきましょうね)
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create Pull Request
+      uses: vsoch/pull-request-action@1.0.23
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PULL_REQUEST_BRANCH: ${{ inputs.main-branch }}
+        PULL_REQUEST_FROM_BRANCH: ${{ inputs.base-branch }}
+        PULL_REQUEST_TITLE: "[CI] ${{ inputs.base-branch }}を${{ inputs.main-branch }}へマージ"
+        PULL_REQUEST_BODY: ""
