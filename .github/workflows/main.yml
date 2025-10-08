@@ -40,14 +40,36 @@ jobs:
      # デプロイする
      - name: Deploy
        run: |
-
          # SSHのセキュリティグループを開放する
          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
 
-         # SSH接続して、git pullする
+         # SSH接続して、デプロイコマンドを実行する
          echo "${{ secrets.GIT_PRIVATE_KEY }}" > private_key
          chmod 600 private_key
-         ssh -oStrictHostKeyChecking=no ${{ secrets.EC2_USER_NAME }}@${{ secrets.EC2_HOST_NAME }} -i private_key "cd /home/ec2-user/dev/actions && git fetch --prune && git checkout main && git pull origin main"
+         ssh -o StrictHostKeyChecking=no -i private_key ${{ secrets.EC2_USER_NAME }}@${{ secrets.EC2_HOST_NAME }} << EOF
+           # ---ここからEC2上で実行されるスクリプト---
+
+           # 変数を定義
+           TARGET_DIR="/home/ec2-user/dev/actions"
+           GIT_REPO_URL="${{ secrets.GIT_REPO_URL }}" # GitHubリポジトリのURL
+
+           # .git ディレクトリの存在チェック
+           if [ -d "\$TARGET_DIR/.git" ]; then
+             # 存在する場合：最新のコードを取得
+             echo "Repository exists. Pulling latest changes."
+             cd "\$TARGET_DIR"
+             git fetch origin
+             git reset --hard origin/main
+           else
+             # 存在しない場合：リポジトリをクローン
+             echo "Repository does not exist. Cloning."
+             # 親ディレクトリがなければ作成
+             mkdir -p \$(dirname "\$TARGET_DIR")
+             git clone "\$GIT_REPO_URL" "\$TARGET_DIR"
+           fi
+
+           # ---ここまでEC2上で実行されるスクリプト---
+         EOF
 
          # SSHのセキュリティグループを閉じる
          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
