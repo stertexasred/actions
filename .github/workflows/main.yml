@@ -37,6 +37,15 @@ jobs:
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          aws-region: ap-southeast-2
 
+     - name: Debug AWS Identity
+       run: |
+         echo "Current AWS Identity:"
+         aws sts get-caller-identity
+         echo "---"
+         echo "Checking IAM policies for kai:"
+         aws iam list-attached-user-policies --user-name kai || echo "Cannot list policies"
+
+
      # デプロイする
      - name: Deploy
        run: |
